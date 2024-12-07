@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pixel Maker</title>
+    <style>
+        /* General styles */
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #1a1a1a;
+            margin: 0;
+            padding: 0;
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            box-sizing: border-box;
+        }
+
+        /* Container for Pixel Maker */
+        .container {
+            background: #2e2e2e;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            padding: 20px;
+            width: 100%;
+            max-width: 450px;
+            text-align: center;
+            box-sizing: border-box;
+        }
+
+        h1 {
+            color: #ffdd00;
+            font-size: 24px;
+            margin-bottom: 15px;
+        }
+
+        /* Palette of colors */
+        .palette {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .palette div {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .palette div:hover {
+            transform: scale(1.2);
+        }
+
+        /* Tools section */
+        .tools {
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #ffdd00;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 16px;
+            transition: background-color 0.2s ease;
+        }
+
+        button:hover {
+            background-color: #ff9900;
+        }
+
+        /* Canvas container */
+        .canvas-container {
+            margin-bottom: 20px;
+        }
+
+        .canvas {
+            border: 2px solid #444;
+            background-color: #111;
+            margin: 0 auto;
+            cursor: crosshair;
+        }
+
+        /* Color picker */
+        input[type="color"] {
+            border: none;
+            border-radius: 5px;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        /* Footer (Creado con amor por Imperium Art) */
+        footer {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #bbb;
+        }
+
+        /* Media queries for responsiveness */
+        @media (max-width: 768px) {
+            .container {
+                width: 90%;
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 20px;
+            }
+
+            button {
+                font-size: 14px;
+                padding: 8px 16px;
+            }
+
+            input[type="color"] {
+                width: 35px;
+                height: 35px;
+            }
+
+            .palette div {
+                width: 30px;
+                height: 30px;
+            }
+
+            .canvas {
+                width: 250px;
+                height: 250px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 18px;
+            }
+
+            button {
+                font-size: 12px;
+                padding: 6px 12px;
+            }
+
+            .palette div {
+                width: 25px;
+                height: 25px;
+            }
+
+            .canvas {
+                width: 200px;
+                height: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Pixel Color</h1>
+
+        <!-- Palette of colors -->
+        <div class="palette">
+            <div id="color1" style="background-color: #000;"></div>
+            <div id="color2" style="background-color: #ff0000;"></div>
+            <div id="color3" style="background-color: #00ff00;"></div>
+            <div id="color4" style="background-color: #0000ff;"></div>
+            <div id="color5" style="background-color: #ffff00;"></div>
+            <div id="color6" style="background-color: #ff00ff;"></div>
+            <div id="color7" style="background-color: #00ffff;"></div>
+        </div>
+
+        <!-- Tools section -->
+        <div class="tools">
+            <button id="clearButton">Clear</button>
+            <button id="saveButton">Save</button>
+            <label for="colorPicker">Pick Color</label>
+            <input type="color" id="colorPicker">
+            <button id="fillButton">Fill Area</button>
+        </div>
+
+        <!-- Canvas section -->
+        <div class="canvas-container">
+            <canvas id="pixelCanvas" width="300" height="300" class="canvas"></canvas>
+        </div>
+
+        <footer>
+            <p>Created with love from Imperium Art</p>
+        </footer>
+    </div>
+
+    <script>
+        // Canvas setup
+        const canvas = document.getElementById("pixelCanvas");
+        const ctx = canvas.getContext("2d");
+        const gridSize = 10; // Pixel grid size
+        let selectedColor = "#000"; // Default color
+        let drawing = false;
+        let fillMode = false; // Fill mode flag
+
+        // Draw grid on canvas
+        function drawGrid() {
+            for (let x = 0; x < canvas.width; x += gridSize) {
+                for (let y = 0; y < canvas.height; y += gridSize) {
+                    ctx.strokeStyle = "#333";
+                    ctx.strokeRect(x, y, gridSize, gridSize);
+                }
+            }
+        }
+
+        // Pixel drawing logic
+        function drawPixel(x, y) {
+            ctx.fillStyle = selectedColor;
+            ctx.fillRect(x * gridSize, y * gridSize, gridSize, gridSize);
+        }
+
+        // Flood fill logic
+        function floodFill(x, y) {
+            const targetColor = ctx.getImageData(x * gridSize, y * gridSize, 1, 1).data;
+            if (targetColor[3] === 0) return; // Transparent area
+
+            const fillStack = [[x, y]];
+
+            while (fillStack.length > 0) {
+                const [cx, cy] = fillStack.pop();
+                if (cx < 0 || cx >= canvas.width / gridSize || cy < 0 || cy >= canvas.height / gridSize) continue;
+
+                const pixelColor = ctx.getImageData(cx * gridSize, cy * gridSize, 1, 1).data;
+
+                if (pixelColor[0] === targetColor[0] && pixelColor[1] === targetColor[1] && pixelColor[2] === targetColor[2]) {
+                    ctx.fillRect(cx * gridSize, cy * gridSize, gridSize, gridSize);
+                    fillStack.push([cx + 1, cy]);
+                    fillStack.push([cx - 1, cy]);
+                    fillStack.push([cx, cy + 1]);
+                    fillStack.push([cx, cy - 1]);
+                }
+            }
+        }
+
+        // Mouse down event to start drawing
+        canvas.addEventListener("mousedown", (e) => {
+            drawing = true;
+            const x = Math.floor(e.offsetX / gridSize);
+            const y = Math.floor(e.offsetY / gridSize);
+            if (fillMode) {
+                floodFill(x, y);
+            } else {
+                drawPixel(x, y);
+            }
+        });
+
+        // Mouse move event to continue drawing
+        canvas.addEventListener("mousemove", (e) => {
+            if (drawing && !fillMode) {
+                const x = Math.floor(e.offsetX / gridSize);
+                const y = Math.floor(e.offsetY / gridSize);
+                drawPixel(x, y);
+            }
+        });
+
+        // Mouse up event to stop drawing
+        canvas.addEventListener("mouseup", () => {
+            drawing = false;
+        });
+
+        // Clear canvas function
+        document.getElementById("clearButton").addEventListener("click", () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawGrid();
+        });
+
+        // Save the canvas as a PNG
+        document.getElementById("saveButton").addEventListener("click", () => {
+            const dataUrl = canvas.toDataURL("image/png");
+            const link = document.createElement("a");
+            link.href = dataUrl;
+            link.download = "pixel_art.png";
+            link.click();
+        });
+
+        // Set selected color from palette
+        document.querySelectorAll(".palette div").forEach((colorDiv) => {
+            colorDiv.addEventListener("click", () => {
+                selectedColor = colorDiv.style.backgroundColor;
+            });
+        });
+
+        // Set custom color from input
+        document.getElementById("colorPicker").addEventListener("input", (e) => {
+            selectedColor = e.target.value;
+        });
+
+        // Enable fill mode
+        document.getElementById("fillButton").addEventListener("click", () => {
+            fillMode = !fillMode;
+            if (fillMode) {
+                document.getElementById("fillButton").innerText = "Exit Fill Mode";
+            } else {
+                document.getElementById("fillButton").innerText = "Fill Area";
+            }
+        });
+
+        // Initial setup
+        drawGrid();
+    </script>
+</body>
+</html>
